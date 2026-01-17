@@ -37,7 +37,9 @@ function myparcelnl_do_mutator_status_changed($order_id): void
 function myparcelnl_do_mutator(WC_Order $order): void
 {
     $options = $order->get_meta('_myparcelnl_order_data');
-    file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- before\n", FILE_APPEND);
+
+    //file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- before\n", FILE_APPEND);
+
     if (! is_array($options)) {
         $options = array();
     }
@@ -89,7 +91,7 @@ function myparcelnl_do_mutator(WC_Order $order): void
         $options['deliveryOptions']['labelAmount'] = 1;
     }
 
-    file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- after\n", FILE_APPEND);
+    //file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- after\n", FILE_APPEND);
 
     /**
      * Save the modified options back to the order.
