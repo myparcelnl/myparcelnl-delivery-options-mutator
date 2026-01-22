@@ -13,15 +13,9 @@
 
 declare(strict_types=1);
 
-/**
- * Using status changed hook seems to work as long as there is 'a' status change after order creation, before exporting.
- * We can't use the order processed hooks because the meta data is not available at that time, contrary to what the documentation says.
- */
-add_action('woocommerce_order_status_changed', 'myparcelnl_do_mutator_status_changed', 10, 1);
-
-// 11 is after MyParcelNL plugin (priority 10), but these hooks do not work because meta data is not available on the order then
-//add_action('woocommerce_blocks_checkout_order_processed', 'myparcelnl_do_mutator', 11, 1);
-//add_action('woocommerce_checkout_order_processed', 'myparcelnl_do_mutator_classic', 11, 3);
+// 11 is after MyParcelNL plugin saves the delivery options (priority 10)
+add_action('woocommerce_blocks_checkout_order_processed', 'myparcelnl_do_mutator', 11, 1);
+add_action('woocommerce_checkout_order_processed', 'myparcelnl_do_mutator_classic', 11, 3);
 
 function myparcelnl_do_mutator_classic($a, $b, WC_Order $order): void
 {
@@ -36,6 +30,11 @@ function myparcelnl_do_mutator_status_changed($order_id): void
 
 function myparcelnl_do_mutator(WC_Order $order): void
 {
+    $alreadyRan = $order->get_meta('_myparcelnl_delivery_options_mutator_done');
+    if ($alreadyRan) {
+        return;
+    }
+
     $options = $order->get_meta('_myparcelnl_order_data');
 
     //file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- before\n", FILE_APPEND);
@@ -52,23 +51,16 @@ function myparcelnl_do_mutator(WC_Order $order): void
     }
 
     if (! isset($options['deliveryOptions']['carrier']['externalIdentifier'])) {
-        $options['deliveryOptions']['carrier'] = array('externalIdentifier' => '');
-    }
-
-    /**
-     * Use some criteria to decide whether the intended modifications are already applied to this order.
-     */
-    $carrier = $options['deliveryOptions']['carrier']['externalIdentifier'];
-
-    if ('dhlforyou' === $carrier) {
-        // already modified, because delivery options are not used in checkout dhlforyou cannot be in the array.
-        return;
+        $options['deliveryOptions']['carrier'] = array('externalIdentifier' => 'dhlforyou');
     }
 
     /**
      * Logic to modify the delivery options as needed.
+     * In this case, we don’t want to modify options if dhlforyou was not chosen or set by default.
      */
-    $options['deliveryOptions']['carrier']['externalIdentifier'] = 'dhlforyou';
+    if ('dhlforyou' !== $options['deliveryOptions']['carrier']['externalIdentifier']) {
+        return;
+    }
 
     $totalWeight = 0;
 
@@ -94,8 +86,9 @@ function myparcelnl_do_mutator(WC_Order $order): void
     //file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- after\n", FILE_APPEND);
 
     /**
-     * Save the modified options back to the order.
+     * Set the already done flag and save the modified options back to the order.
      */
+    $order->update_meta_data('_myparcelnl_delivery_options_mutator_done', true);
     $order->update_meta_data('_myparcelnl_order_data', $options);
     $order->save_meta_data();
 }
