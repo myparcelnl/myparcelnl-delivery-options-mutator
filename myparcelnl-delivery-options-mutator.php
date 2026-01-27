@@ -5,7 +5,7 @@
  * Description: Starting point to automatically modify MyParcelNL delivery options on WooCommerce orders.
  * Author: MyParcel
  * Author URI: https://www.myparcel.nl
- * Version: 0.0.2
+ * Version: 0.0.3
  * License: MIT
  * License URI: https://opensource.org/license/mit
  * Requires Plugins: woocommerce, woocommerce-myparcel
@@ -13,9 +13,10 @@
 
 declare(strict_types=1);
 
-// 11 is after MyParcelNL plugin saves the delivery options (priority 10)
-add_action('woocommerce_blocks_checkout_order_processed', 'myparcelnl_do_mutator', 11, 1);
-add_action('woocommerce_checkout_order_processed', 'myparcelnl_do_mutator_classic', 11, 3);
+// 110 is after MyParcelNL plugin saves the delivery options (priority 10)
+add_action('woocommerce_blocks_checkout_order_processed', 'myparcelnl_do_mutator', 110, 1);
+add_action('woocommerce_checkout_order_processed', 'myparcelnl_do_mutator_classic', 110, 3);
+//add_action('woocommerce_order_status_changed', 'myparcelnl_do_mutator_status_changed', 110, 1);
 
 function myparcelnl_do_mutator_classic($a, $b, WC_Order $order): void
 {
@@ -30,6 +31,9 @@ function myparcelnl_do_mutator_status_changed($order_id): void
 
 function myparcelnl_do_mutator(WC_Order $order): void
 {
+    // you must get a fresh order, because the one you get passed in is stale most of the time, without the latest meta data
+    $order = wc_get_order($order->get_id());
+
     $alreadyRan = $order->get_meta('_myparcelnl_delivery_options_mutator_done');
     if ($alreadyRan) {
         return;
@@ -37,7 +41,7 @@ function myparcelnl_do_mutator(WC_Order $order): void
 
     $options = $order->get_meta('_myparcelnl_order_data');
 
-    //file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- before\n", FILE_APPEND);
+    //file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- {$order->get_id()} before\n", FILE_APPEND);
 
     if (! is_array($options)) {
         $options = array();
@@ -56,11 +60,10 @@ function myparcelnl_do_mutator(WC_Order $order): void
 
     /**
      * Logic to modify the delivery options as needed.
-     * In this case, we don’t want to modify options if dhlforyou was not chosen or set by default.
      */
-    if ('dhlforyou' !== $options['deliveryOptions']['carrier']['externalIdentifier']) {
-        return;
-    }
+//    if ('dhlforyou' !== $options['deliveryOptions']['carrier']['externalIdentifier']) {
+//        return;
+//    }
 
     $totalWeight = 0;
 
@@ -83,7 +86,7 @@ function myparcelnl_do_mutator(WC_Order $order): void
         $options['deliveryOptions']['labelAmount'] = 1;
     }
 
-    //file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- after\n", FILE_APPEND);
+    //file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- {$order->get_id()}  after\n", FILE_APPEND);
 
     /**
      * Set the already done flag and save the modified options back to the order.
