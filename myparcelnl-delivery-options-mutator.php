@@ -5,7 +5,7 @@
  * Description: Starting point to automatically modify MyParcelNL delivery options on WooCommerce orders.
  * Author: MyParcel
  * Author URI: https://www.myparcel.nl
- * Version: 0.0.3
+ * Version: 0.0.4
  * License: MIT
  * License URI: https://opensource.org/license/mit
  * Requires Plugins: woocommerce, woocommerce-myparcel
@@ -32,14 +32,15 @@ function myparcelnl_do_mutator_status_changed($order_id): void
 function myparcelnl_do_mutator(WC_Order $order): void
 {
     // you must get a fresh order, because the one you get passed in is stale most of the time, without the latest meta data
-    $order = wc_get_order($order->get_id());
+    $order        = wc_get_order($order->get_id());
+    $orderDataKey = '_myparcelcom_order_data'; // MyParcel plugin v5: '_myparcelnl_order_data' for v6: '_myparcelcom_order_data'
 
     $alreadyRan = $order->get_meta('_myparcelnl_delivery_options_mutator_done');
     if ($alreadyRan) {
         return;
     }
 
-    $options = $order->get_meta('_myparcelnl_order_data');
+    $options = $order->get_meta($orderDataKey);
 
     //file_put_contents(__DIR__ . '/debug.log', var_export($options, true) . " <- {$order->get_id()} before\n", FILE_APPEND);
 
@@ -65,6 +66,9 @@ function myparcelnl_do_mutator(WC_Order $order): void
 //        return;
 //    }
 
+    /**
+     * The next lines change the number of labels based on order weight
+     */
     $totalWeight = 0;
 
     foreach ($order->get_items() as $item) {
@@ -92,7 +96,7 @@ function myparcelnl_do_mutator(WC_Order $order): void
      * Set the already done flag and save the modified options back to the order.
      */
     $order->update_meta_data('_myparcelnl_delivery_options_mutator_done', true);
-    $order->update_meta_data('_myparcelnl_order_data', $options);
+    $order->update_meta_data($orderDataKey, $options);
     $order->save_meta_data();
 }
 
