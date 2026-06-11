@@ -17,6 +17,7 @@ declare(strict_types=1);
 add_action('woocommerce_blocks_checkout_order_processed', 'myparcelnl_do_mutator', 110, 1);
 add_action('woocommerce_checkout_order_processed', 'myparcelnl_do_mutator_classic', 110, 3);
 //add_action('woocommerce_order_status_changed', 'myparcelnl_do_mutator_status_changed', 110, 1);
+add_action('woocommerce_new_order', 'myparcelnl_do_mutator_status_changed', 110, 1);
 
 function myparcelnl_do_mutator_classic($a, $b, WC_Order $order): void
 {
@@ -56,7 +57,8 @@ function myparcelnl_do_mutator(WC_Order $order): void
     }
 
     if (! isset($options['deliveryOptions']['carrier']['externalIdentifier'])) {
-        $options['deliveryOptions']['carrier'] = array('externalIdentifier' => 'dhlforyou');
+        //$options['deliveryOptions']['carrier'] = array('externalIdentifier' => 'dhlforyou'); // <- V5
+        $options['deliveryOptions']['carrier'] = 'DHL_FOR_YOU'; // <- V6
     }
 
     /**
